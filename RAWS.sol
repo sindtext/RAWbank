@@ -8,115 +8,104 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract RAWS is ERC20, AccessControl, ERC20Permit, ReentrancyGuard {
-    constructor() payable
-        ERC20("Reign Alter World Sovereign", "RAWS")
-        ERC20Permit("Reign Alter World Sovereign")
-    {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
-
+    bytes32 internal constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    uint256 internal maxSupply = 1600000000;
+    uint256 internal constant MaxSupply = 1600000000;
 
     struct Allocation {
         string Utility;
         address Entitled;
         uint256 Right;
         uint256 Balance;
-        uint Unlock;
-        uint Monthly;
+        uint256 Unlock;
+        uint256 Monthly;
         uint256 Cliff;
     }
 
-    string[] internal utilities;
-    uint256 internal allocated;
-    uint256 internal taked;
+    string[] public Utilities;
+    uint256 internal Allocated;
+    uint256 internal Taked;
 
-    mapping(string => Allocation) internal allocation;
+    mapping(string => Allocation) public Allocations;
     
-    event allocationUpdate(Allocation result);
-
-    function _sender() internal view returns (address payable) {
-        return payable(msg.sender);
+    constructor() payable
+        ERC20("Reign Alter World Sovereign", "RAWS")
+        ERC20Permit("Reign Alter World Sovereign")
+    {
+        _grantRole(MANAGER_ROLE, msg.sender);
     }
 
-    function allocate(string calldata utility, address entitled, uint256 right, uint cliff, uint unlock, uint monthly) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(allocation[utility].Entitled == address(0x0), "Already Exist");
-        require(allocated + right <= maxSupply, "Max Supply Reach");
+    event AllocationUpdate(Allocation result);
+
+    function Allocate(string calldata utility, address entitled, uint256 right, uint256 cliff, uint256 unlock, uint256 monthly) external onlyRole(MANAGER_ROLE) {
+        require(Allocations[utility].Entitled == address(0x0), "Already Exist");
+        require(Allocated + right <= MaxSupply, "Max Supply Reach");
         
-        allocation[utility] = Allocation (
+        Allocations[utility] = Allocation (
             utility, entitled, right, right, unlock * 10, monthly * 10, block.timestamp + cliff * 60 * 60 * 24 * 30
         );
 
-        allocated += right;
-        utilities.push(utility);
+        Allocated += right;
+        Utilities.push(utility);
         grantRole(MINTER_ROLE, entitled);
 
-        emit allocationUpdate(allocation[utility]);
+        emit AllocationUpdate(Allocations[utility]);
     }
 
-    function reallocate(string calldata utility, address entitled, uint256 right, uint cliff, uint unlock, uint monthly) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(allocation[utility].Entitled != address(0x0), "Not Exist");
-        require(allocated - allocation[utility].Right + right <= maxSupply, "Max Supply Reach");
+    function Reallocate(string calldata utility, address entitled, uint256 right, uint256 cliff, uint256 unlock, uint256 monthly) external onlyRole(MANAGER_ROLE) {
+        require(Allocations[utility].Entitled != address(0x0), "Not Exist");
+        require(Allocated - Allocations[utility].Right + right <= MaxSupply, "Max Supply Reach");
 
-        revokeRole(MINTER_ROLE, allocation[utility].Entitled);
+        revokeRole(MINTER_ROLE, Allocations[utility].Entitled);
         grantRole(MINTER_ROLE, entitled);
 
-        allocated = allocated - allocation[utility].Right + right;
+        Allocated = Allocated - Allocations[utility].Right + right;
 
-        allocation[utility].Monthly = monthly * 10;
-        allocation[utility].Unlock = unlock * 10;
-        allocation[utility].Cliff = block.timestamp + cliff * 60 * 60 * 24 * 30;
-        allocation[utility].Balance = right - (allocation[utility].Right - allocation[utility].Balance);
-        allocation[utility].Right = right;
-        allocation[utility].Entitled = entitled;
+        Allocations[utility].Monthly = monthly * 10;
+        Allocations[utility].Unlock = unlock * 10;
+        Allocations[utility].Cliff = block.timestamp + cliff * 60 * 60 * 24 * 30;
+        Allocations[utility].Balance = right - (Allocations[utility].Right - Allocations[utility].Balance);
+        Allocations[utility].Right = right;
+        Allocations[utility].Entitled = entitled;
 
-        emit allocationUpdate(allocation[utility]);
+        emit AllocationUpdate(Allocations[utility]);
     }
 
-    function takeRight(string calldata utility, uint256 amount) external payable nonReentrant onlyRole(MINTER_ROLE) {
-        require(_sender() == allocation[utility].Entitled, "Not Entitled");
+    function TakeRight(string calldata utility, uint256 amount) external payable nonReentrant onlyRole(MINTER_ROLE) {
+        require(_msgSender() == Allocations[utility].Entitled, "Not Entitled");
+        require(amount <= UtilityAllotment(utility) - Allocations[utility].Right - Allocations[utility].Balance, "Not Enough Utility Allocation");
+        require(amount <= Allocations[utility].Balance, "Not Enough Utility Balance");
+        require(totalSupply() / 10 ** decimals() + amount <= MaxSupply, "Max Supply Reach");
 
-        uint256 allotment = utilityAllotment(utility);
-        uint256 unlock = allocation[utility].Right - allocation[utility].Balance;
-        require(amount <= allotment - unlock, "Not Enough Utility Allocation");
-        require(amount <= allocation[utility].Balance, "Not Enough Utility Balance");
-        require(totalSupply() / 10 ** decimals() + amount <= maxSupply, "Max Supply Reach");
+        Allocations[utility].Balance -= amount;
+        Taked += amount;
+        _mint(_msgSender(), amount * 10 ** decimals());
 
-        allocation[utility].Balance -= amount;
-        taked += amount;
-        _mint(_sender(), amount * 10 ** decimals());
-
-        emit allocationUpdate(allocation[utility]);
+        emit AllocationUpdate(Allocations[utility]);
     }
 
-    function utilityList() external view returns (string[] memory) {
-        return utilities;
-    }
+    function UtilityAllotment(string calldata utility) public view returns (uint256) {
+        uint256 _monthly = 0;
 
-    function utilityCheck(string calldata utility) external view returns (Allocation memory) {
-        return allocation[utility];
-    }
-
-    function utilityAllotment(string calldata utility) public view returns (uint256) {
-        uint256 monthly = 0;
-
-        if(block.timestamp > allocation[utility].Cliff)
+        if(block.timestamp > Allocations[utility].Cliff)
         {
-            uint256 counter = (block.timestamp - allocation[utility].Cliff) / (60 * 60 * 24 * 30);
-            monthly = counter * allocation[utility].Monthly;
+            uint256 _counter = (block.timestamp - Allocations[utility].Cliff) / (60 * 60 * 24 * 30);
+            _monthly = _counter * Allocations[utility].Monthly;
         }
 
-        uint256 percent = allocation[utility].Unlock + monthly;
-        return allocation[utility].Right * percent / 1000;
+        uint256 _percent = Allocations[utility].Unlock + _monthly;
+        return Allocations[utility].Right * _percent / 1000;
     }
 
-    function stuckTokens(address token) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(taked == totalSupply() / 10 ** decimals(), "Temporary Locked");
+    function StuckTokens(address token) external onlyRole(MANAGER_ROLE) {
+        if (token == address(0x0)) {
+            payable(_msgSender()).transfer(address(this).balance);
+            return;
+        }
+        require(Taked == totalSupply() / 10 ** decimals(), "Temporary Locked");
         
-        ERC20 stucktoken = ERC20(token);
-        uint256 stuckBalance = stucktoken.balanceOf(address(this));
-        stucktoken.transfer(_sender(), stuckBalance);
+        ERC20 _stucktoken = ERC20(token);
+        _stucktoken.transfer(_msgSender(), _stucktoken.balanceOf(address(this)));
     }
 }

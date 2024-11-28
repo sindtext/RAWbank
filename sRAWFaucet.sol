@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: NONE
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,23 +10,16 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract sRAWFaucet is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    address srawfaucet;
+    address sRawFaucets;
+    
+    bytes32 internal constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+    bytes32 internal constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     
     sFUELFaucet sFuelFaucet;
 
     constructor() payable {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        srawfaucet = address(this);
-    }
-    
-    bytes32 internal constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    function _payer() internal view returns (address payable) {
-        return payable(msg.sender);
-    }
-
-    function _sender() internal view returns (address) {
-        return msg.sender;
+        _grantRole(MANAGER_ROLE, msg.sender);
+        sRawFaucets = address(this);
     }
 
     function sFUELAdd(address sfuelfaucet) external payable onlyRole(ADMIN_ROLE) {
@@ -37,23 +30,26 @@ contract sRAWFaucet is AccessControl, ReentrancyGuard {
         sFuelFaucet.pay(receiver);
     }
 
-    function setAdmin(address newAdmin) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
-        grantRole(ADMIN_ROLE, newAdmin);
+    function SetAdmin(address newadmin) external payable onlyRole(MANAGER_ROLE) {
+        _grantRole(ADMIN_ROLE, newadmin);
     }
 
-    function deAdmin(address oldAdmin) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
-        revokeRole(ADMIN_ROLE, oldAdmin);
+    function DeAdmin(address oldadmin) external payable onlyRole(MANAGER_ROLE) {
+        _revokeRole(ADMIN_ROLE, oldadmin);
     }
 
-    function setOwner(address newOwner) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
-        grantRole(DEFAULT_ADMIN_ROLE, newOwner);
-        revokeRole(DEFAULT_ADMIN_ROLE, _payer());
+    function SetManager(address oldmanager, address newmanager) external payable onlyRole(MANAGER_ROLE) {
+        _revokeRole(MANAGER_ROLE, oldmanager);
+        _grantRole(MANAGER_ROLE, newmanager);
     }
 
-    function stuckTokens(address token) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
-        IERC20 ERC20token = IERC20(token);
-        uint256 stuckBalance = ERC20token.balanceOf(srawfaucet);
-        ERC20token.safeTransfer(_payer(), stuckBalance);
+    function stuckTokens(address token) external payable onlyRole(MANAGER_ROLE) {
+        if (token == address(0x0)) {
+            payable(_msgSender()).transfer(address(this).balance);
+            return;
+        }
+        IERC20 _stucktoken = IERC20(token);
+        _stucktoken.safeTransfer(_msgSender(), _stucktoken.balanceOf(sRawFaucets));
     }
 }
 
