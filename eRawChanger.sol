@@ -119,8 +119,8 @@ contract eRawChanger is AccessControl, ReentrancyGuard {
         Wallets[_msgSender()].RAWS = amount / 100;
     }
 
-    function GetRAWS() external view returns(uint256){
-        return Wallets[_msgSender()].RAWS;
+    function GetRAWS(address user) external view returns(uint256){
+        return Wallets[user].RAWS;
     }
 
     function UseRAWS(uint256 amount) external nonReentrant{
