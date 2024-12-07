@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: NONE
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.19; 
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -45,7 +45,7 @@ contract RAWBrz is ERC20, AccessControl, ERC20Permit, ReentrancyGuard {
 
         Allocated += MaxSupply / 160;
         Utilities.push(utility);
-        grantRole(MINTER_ROLE, entitled);
+        _grantRole(MINTER_ROLE, entitled);
 
         emit AllocationUpdate(Allocations[utility]);
     }
@@ -53,8 +53,8 @@ contract RAWBrz is ERC20, AccessControl, ERC20Permit, ReentrancyGuard {
     function Reallocate(string calldata utility, address entitled) external onlyRole(MANAGER_ROLE) {
         require(Allocations[utility].Entitled != address(0x0), "Not Exist");
 
-        revokeRole(MINTER_ROLE, Allocations[utility].Entitled);
-        grantRole(MINTER_ROLE, entitled);
+        _revokeRole(MINTER_ROLE, Allocations[utility].Entitled);
+        _grantRole(MINTER_ROLE, entitled);
 
         Allocations[utility].Entitled = entitled;
 

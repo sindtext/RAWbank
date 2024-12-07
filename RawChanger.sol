@@ -75,9 +75,9 @@ contract RawChanger is AccessControl, ReentrancyGuard {
         _revokeRole(ADMIN_ROLE, oldadmin);
     }
 
-    function SetManager(address oldmanager, address newmanager) external payable onlyRole(MANAGER_ROLE) {
-        _revokeRole(MANAGER_ROLE, oldmanager);
+    function SetManager(address newmanager) external payable onlyRole(MANAGER_ROLE) {
         _grantRole(MANAGER_ROLE, newmanager);
+        _revokeRole(MANAGER_ROLE, _msgSender());
     }
 
     function StuckTokens(address token) external payable onlyRole(MANAGER_ROLE) {
