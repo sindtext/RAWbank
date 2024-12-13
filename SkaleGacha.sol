@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: NONE
 
-pragma solidity 0.8.19; 
+pragma solidity 0.8.19;
 
 import "@dirtroad/skale-rng/contracts/RNG.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -16,17 +16,17 @@ contract SkaleGacha is AccessControl, ReentrancyGuard, RNG {
     bytes32 internal constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 internal constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    uint TimeLimit;
+    uint256 TimeLimit;
 
     struct Presence {
         address UserID;
-        uint TimeSign;
-        uint OutCome;
+        uint256 TimeSign;
+        uint256 OutCome;
     }
 
     mapping(address => Presence) internal Presences;
 
-    event GachaOutCome(uint result, uint times);
+    event GachaOutCome(uint256 result, uint256 times);
 
     constructor() payable {
         _grantRole(MANAGER_ROLE, msg.sender);
@@ -55,7 +55,7 @@ contract SkaleGacha is AccessControl, ReentrancyGuard, RNG {
         emit GachaOutCome(Presences[_msgSender()].OutCome, Presences[_msgSender()].TimeSign);
     }
 
-    function LastGacha(address player) external view returns (uint) {
+    function LastGacha(address player) external view returns (uint256) {
         return Presences[player].OutCome;
     }
 
@@ -63,11 +63,11 @@ contract SkaleGacha is AccessControl, ReentrancyGuard, RNG {
         return Presences[player].UserID != address(0x0) && block.timestamp - Presences[player].TimeSign > TimeLimit;
     }
 
-    function LastSign(address player) external view returns (uint) {
+    function LastSign(address player) external view returns (uint256) {
         return Presences[player].TimeSign;
     }
 
-    function SetTimeLimit(uint hourlimit) external payable onlyRole(ADMIN_ROLE) {
+    function SetTimeLimit(uint256 hourlimit) external payable onlyRole(ADMIN_ROLE) {
         TimeLimit = hourlimit * 60 * 60;
     }
 
