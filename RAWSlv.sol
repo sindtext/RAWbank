@@ -11,7 +11,7 @@ contract RAWSlv is ERC20, AccessControl, ERC20Permit, ReentrancyGuard {
     bytes32 internal constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    uint256 internal constant MaxSupply = 1280000000000;
+    uint256 internal constant MaxSupply = 2048000000000;
 
     struct Allocation {
         string Utility;
