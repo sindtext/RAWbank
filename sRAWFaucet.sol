@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract sRAWFaucet is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    address sRawFaucets;
+    address sRawFaucet;
     
     bytes32 internal constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 internal constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -19,15 +19,15 @@ contract sRAWFaucet is AccessControl, ReentrancyGuard {
 
     constructor() payable {
         _grantRole(MANAGER_ROLE, msg.sender);
-        sRawFaucets = address(this);
+        sRawFaucet = address(this);
     }
 
     function sFUELAdd(address sfuelfaucet) external payable onlyRole(ADMIN_ROLE) {
         sFuelFaucet = sFUELFaucet(sfuelfaucet);
     }
     
-    function sRawFaucet(address payable receiver) external payable onlyRole(ADMIN_ROLE) {
-        sFuelFaucet.pay(receiver);
+    function sRawPay(address payable receiver) external payable onlyRole(ADMIN_ROLE) {
+        sFuelFaucet.Pay(receiver);
     }
 
     function SetAdmin(address newadmin) external payable onlyRole(MANAGER_ROLE) {
@@ -49,10 +49,10 @@ contract sRAWFaucet is AccessControl, ReentrancyGuard {
             return;
         }
         IERC20 _stucktoken = IERC20(token);
-        _stucktoken.safeTransfer(_msgSender(), _stucktoken.balanceOf(sRawFaucets));
+        _stucktoken.safeTransfer(_msgSender(), _stucktoken.balanceOf(sRawFaucet));
     }
 }
 
 interface sFUELFaucet{
-  function pay(address payable receiver) external;
+  function Pay(address payable receiver) external;
 }
