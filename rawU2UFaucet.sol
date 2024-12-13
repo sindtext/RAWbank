@@ -10,24 +10,24 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract rawU2UFaucet is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    address rawU2UFaucets;
+    address rawU2UFaucet;
     
     bytes32 internal constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 internal constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     
-    iU2UFaucet iU2UFaucets;
+    iU2UFaucet iU2uFaucet;
 
     constructor() payable {
         _grantRole(MANAGER_ROLE, msg.sender);
-        rawU2UFaucets = address(this);
+        rawU2UFaucet = address(this);
     }
 
     function U2UAdd(address faucet) external payable onlyRole(ADMIN_ROLE) {
-        iU2UFaucets = iU2UFaucet(faucet);
+        iU2uFaucet = iU2UFaucet(faucet);
     }
     
     function U2UPay(address payable receiver) external payable onlyRole(ADMIN_ROLE) {
-        iU2UFaucets.Pay(receiver);
+        iU2uFaucet.Pay(receiver);
     }
 
     function SetAdmin(address newadmin) external payable onlyRole(MANAGER_ROLE) {
@@ -49,7 +49,7 @@ contract rawU2UFaucet is AccessControl, ReentrancyGuard {
             return;
         }
         IERC20 _stucktoken = IERC20(token);
-        _stucktoken.safeTransfer(_msgSender(), _stucktoken.balanceOf(rawU2UFaucets));
+        _stucktoken.safeTransfer(_msgSender(), _stucktoken.balanceOf(rawU2UFaucet));
     }
 }
 
